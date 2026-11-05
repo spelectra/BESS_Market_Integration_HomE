@@ -1,4 +1,5 @@
 pandas
 numpy
 python-dotenv
-entsoe-py
+entsoe-pyrequests
+openpyxl
