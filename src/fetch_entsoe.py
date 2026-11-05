@@ -2,6 +2,16 @@ import os
 from dotenv import load_dotenv
 from entsoe import EntsoePandasClient
 import pandas as pd
+from pathlib import Path
+import argparse
+
+# Day-ahead prices switched from hourly to 15-min resolution on 2025-10-01 (SDAC go-live)
+DA_15MIN_START = pd.Timestamp("2025-10-01", tz="Europe/Brussels")
+
+#location to save
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+RAW_DIR = PROJECT_ROOT / "data" / "raw"
+
 
 # Load the ENTSOE_API_KEY from the .env file
 load_dotenv()  # reads .env from the project root
@@ -12,72 +22,61 @@ if not api_key:
     )
 client = EntsoePandasClient(api_key)
 
-#Assign path to save
-
-
-
-
-#Load Day Ahead Prices for Germany from 2017-12-01 to 2018-01-01
-
-def fetch_day_ahead_prices(start_date.tz_convert("UTC"), end_date.tz_convert("UTC"), country_code):
-    start = pd.Timestamp(start_date, tz='UTC')
-    end = pd.Timestamp(end_date, tz='UTC')
+#fetch day ahead prices in specified interval
+def fetch_day_ahead_prices(start_date, end_date, country_code):
+    start = pd.Timestamp(start_date, tz='Europe/Brussels')
+    end = pd.Timestamp(end_date, tz='Europe/Brussels')
     country_code = country_code 
-    country_code_from = country_code 
-    country_code_to = country_code 
-
-    #ignore this for now
-    type_marketagreement_type = 'A01'
-    contract_marketagreement_type = "A01"
-    process_type = 'A51'
-
-    # Day-ahead prices switched from hourly to 15-min resolution on 2025-10-01 (SDAC go-live)
-    DA_15MIN_START = pd.Timestamp("2025-10-01", tz="Europe/Brussels")
-
+    
     if start < DA_15MIN_START:
         raise ValueError(
             f"Start date {start.date()} is before {DA_15MIN_START.date()}: "
             "day-ahead prices are hourly before this date, not 15-min."
         )
 
-    # methods that return Pandas Series
-    dataframe = client.query_day_ahead_prices(country_code, start=start, end=end)
-    # client.query_aggregated_bids(country_code, start=start, end=end, process_type)
-    # client.query_net_position(country_code, start=start, end=end, dayahead=True)
-    # client.query_crossborder_flows(country_code_from, country_code_to, start=start, end=end)
-    # client.query_scheduled_exchanges(country_code_from, country_code_to, start=start, end=end, dayahead=False)
-    # client.query_net_transfer_capacity_dayahead(country_code_from, country_code_to, start=start, end=end)
-    # client.query_net_transfer_capacity_weekahead(country_code_from, country_code_to, start=start, end=end)
-    # client.query_net_transfer_capacity_monthahead(country_code_from, country_code_to, start=start, end=end)
-    # client.query_net_transfer_capacity_yearahead(country_code_from, country_code_to, start=start, end=end)
-    # client.query_intraday_offered_capacity(country_code_from, country_code_to, start=start, end=end, implicit=True)
-    # client.query_offered_capacity(country_code_from, country_code_to, contract_marketagreement_type, start=start, end=end, implicit=True)
-    # client.query_aggregate_water_reservoirs_and_hydro_storage(country_code, start=start, end=end)
+    # returns panda series
+    prices = client.query_day_ahead_prices(country_code, start=start, end=end)
+    return prices
 
-    # methods that return Pandas DataFrames
-    # client.query_load(country_code, start=start, end=end)
-    # client.query_load_forecast(country_code, start=start, end=end)
-    # client.query_load_and_forecast(country_code, start=start, end=end)
-    # client.query_generation_forecast(country_code, start=start, end=end)
-    # client.query_wind_and_solar_forecast(country_code, start=start, end=end, psr_type=None)
-    # client.query_intraday_wind_and_solar_forecast(country_code, start=start, end=end, psr_type=None)
-    # client.query_generation(country_code, start=start, end=end, psr_type=None)
-    # client.query_generation_per_plant(country_code, start=start, end=end, psr_type=None, include_eic=False)
-    # client.query_installed_generation_capacity(country_code, start=start, end=end, psr_type=None)
-    # client.query_installed_generation_capacity_per_unit(country_code, start=start, end=end, psr_type=None)
-    # client.query_activated_balancing_energy_prices(country_code, start=start, end=end, process_type='A16', psr_type=None, business_type=None, standard_market_product=None, original_market_product=None)
-    # client.query_activated_balancing_energy(country_code, start=start, end=end, business_type, psr_type=None)
-    # client.query_imbalance_prices(country_code, start=start, end=end, psr_type=None)
-    # client.query_imbalance_volumes(country_code, start=start, end=end, psr_type=None)
-    # client.query_contracted_reserve_prices(country_code, type_marketagreement_type, start=start, end=end, psr_type=None)
-    # client.query_contracted_reserve_amount(country_code, type_marketagreement_type, start=start, end=end, psr_type=None)
-    # client.query_unavailability_of_generation_units(country_code, start=start, end=end, docstatus=None, periodstartupdate=None, periodendupdate=None)
-    # client.query_unavailability_of_production_units(country_code, start, end, docstatus=None, periodstartupdate=None, periodendupdate=None)
-    # client.query_unavailability_transmission(country_code_from, country_code_to, start=start, end=end, docstatus=None, periodstartupdate=None, periodendupdate=None)
-    # client.query_withdrawn_unavailability_of_generation_units(country_code, start, end)
-    # client.query_unavailability_of_offshore_grid(area_code, start, end)
-    # client.query_physical_crossborder_allborders(country_code, start, end, export=True)
-    # client.query_import(country_code, start, end)
-    # client.query_generation_import(country_code, start, end)
-    # client.query_procured_balancing_capacity(country_code, process_type, start=start, end=end, type_marketagreement_type=None)
-return dataframe
+
+
+def save_to_csv(prices: pd.Series, file_path: Path) -> None:
+    """Write a price series to CSV, creating parent folders if needed."""
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    prices.tz_convert("UTC").to_csv(file_path, header=["price_eur_mwh"])
+    
+def build_raw_filename(start_date: str, end_date: str, country_code: str) -> str:
+    """Standardized raw filename: da_prices_<COUNTRY>_<YYYY-MM-DD>_<YYYY-MM-DD>.csv (end exclusive)."""
+    start = pd.Timestamp(start_date).strftime("%Y-%m-%d")
+    end = pd.Timestamp(end_date).strftime("%Y-%m-%d")
+    return f"da_prices_{country_code}_{start}_{end}.csv"
+
+
+def fetch_and_save(
+    start_date: str,
+    end_date: str,
+    country_code: str = "DE_LU",
+    raw_dir: Path = RAW_DIR,
+) -> Path:
+    """Fetch day-ahead prices, save them to raw_dir under the standard name, return the file path."""
+    prices = fetch_day_ahead_prices(start_date, end_date, country_code)
+    file_path = raw_dir / build_raw_filename(start_date, end_date, country_code)
+    save_to_csv(prices, file_path)
+    return file_path
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Fetch ENTSO-E day-ahead prices into data/raw.")
+    parser.add_argument("--start", required=True, help="Start date, e.g. 2025-10-01 (inclusive)")
+    parser.add_argument("--end", required=True, help="End date, e.g. 2025-11-01 (exclusive)")
+    parser.add_argument("--country", default="DE_LU", help="Bidding zone code (default: DE_LU)")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    path = fetch_and_save(args.start, args.end, args.country)
+    print(f"Saved to {path}")
+
+
+
