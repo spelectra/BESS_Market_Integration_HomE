@@ -1,11 +1,12 @@
 """Fetch 4-h FCR and aFRR capacity auction results from regelleistung.net into data/raw."""
-import argparse
 import io
 from pathlib import Path
 import time
 
 import pandas as pd
 import requests
+
+from bess.paths import RAW_DIR
 
 # Constants
 BASE_URL = "https://www.regelleistung.net/apps/cpp-publisher/api/v1/download/tenders/resultsoverview"
@@ -14,10 +15,6 @@ PRODUCT_COLUMN = {"FCR": "PRODUCTNAME", "aFRR": "PRODUCT"}  # e.g. "NEGPOS_00_04
 MARKET_TZ = "Europe/Berlin"  # 4-h blocks are defined in German local time
 REQUEST_TIMEOUT_S = 30    # max wait for one response
 REQUEST_DELAY_S = 0.25    # pause between requests
-
-# location to save
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-RAW_DIR = PROJECT_ROOT / "data" / "raw"
 
 
 def fetch_day(day: pd.Timestamp, product: str) -> pd.DataFrame:
@@ -74,24 +71,3 @@ def fetch_and_save(start_date: str, end_date: str, product: str, raw_dir: Path =
     file_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(file_path, index=False)
     return file_path
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch FCR/aFRR capacity results into data/raw.")
-    parser.add_argument("--start", required=True, help="Start date, e.g. 2025-10-01 (inclusive)")
-    parser.add_argument("--end", required=True, help="End date, e.g. 2025-11-01 (exclusive)")
-    parser.add_argument(
-        "--products",
-        nargs="+",
-        choices=PRODUCTS,
-        default=PRODUCTS,
-        help="One or more products to fetch (default: FCR aFRR)",
-    )
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    for product in args.products:
-        path = fetch_and_save(args.start, args.end, product)
-        print(f"Saved {product} to {path}")

@@ -1,5 +1,4 @@
 """Fetch 15-min data from the Netztransparenz (German TSOs) API into data/raw."""
-import argparse
 import io
 import os
 from pathlib import Path
@@ -7,6 +6,8 @@ from pathlib import Path
 import pandas as pd
 import requests
 from dotenv import load_dotenv
+
+from bess.paths import RAW_DIR
 
 # Constants
 TOKEN_URL = "https://identity.netztransparenz.de/users/connect/token"
@@ -19,10 +20,6 @@ API_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"  # API expects UTC timestamps in this form
 DATASETS = {
     "id_aep": ("IdAep", "ID AEP in EUR/MWh"),
 }
-
-# location to save
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-RAW_DIR = PROJECT_ROOT / "data" / "raw"
 
 
 def get_access_token() -> str:
@@ -89,25 +86,3 @@ def fetch_and_save(start_date: str, end_date: str, dataset: str, token: str, raw
     file_path = raw_dir / build_raw_filename(start_date, end_date, dataset)
     save_to_csv(prices, file_path)
     return file_path
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch Netztransparenz data into data/raw.")
-    parser.add_argument("--start", required=True, help="Start date, e.g. 2025-10-01 (inclusive)")
-    parser.add_argument("--end", required=True, help="End date, e.g. 2025-11-01 (exclusive)")
-    parser.add_argument(
-        "--datasets",
-        nargs="+",
-        choices=DATASETS,
-        default=["id_aep"],
-        help="One or more datasets to fetch (default: id_aep)",
-    )
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    token = get_access_token()  # one token for all datasets; it is valid for 1 h
-    for dataset in args.datasets:
-        path = fetch_and_save(args.start, args.end, dataset, token)
-        print(f"Saved {dataset} to {path}")

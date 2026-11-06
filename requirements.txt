@@ -1,5 +1,3 @@
-pandas
-numpy
-python-dotenv
-entsoe-pyrequests
-openpyxl
+# Installs the bess package (src/bess) in editable mode plus dev tools.
+# Dependencies themselves are listed in pyproject.toml.
+-e .[dev]

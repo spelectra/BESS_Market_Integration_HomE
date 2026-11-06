@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bess"
+version = "0.1.0"
+description = "Revenue simulation for a 3 MWh battery in Wertheim across DA, intraday, FCR and aFRR"
+requires-python = ">=3.9"
+# Single source of truth for dependencies; requirements.txt just installs this package
+dependencies = [
+    "pandas",
+    "numpy",
+    "python-dotenv",
+    "entsoe-py",
+    "requests",
+    "openpyxl",
+    "cvxpy",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
