@@ -5,6 +5,9 @@ import pandas as pd
 from pathlib import Path
 import argparse
 
+#python src/fetch_entsoe.py --start 2025-10-01 --end 2025-11-01 --datasets da ida1
+
+
 #Constants
 
 # Day-ahead prices switched from hourly to 15-min resolution on 2025-10-01 (SDAC go-live)
@@ -52,6 +55,8 @@ def fetch_day_ahead_prices(start_date, end_date, country_code) -> pd.Series:
     start, end = _validated_range(start_date, end_date, DA_15MIN_START)
     # returns panda series
     prices = client.query_day_ahead_prices(country_code, start=start, end=end)
+    # entsoe-py truncates with after=end (inclusive); drop the end timestamp so the range is [start, end)
+    prices = prices[prices.index < end]
     return prices
 
 
