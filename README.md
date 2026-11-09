@@ -62,8 +62,7 @@ With negative prices, a pure LP can charge and discharge in the same step to "bu
 the efficiency losses and get paid for consuming it, which is physically impossible. In October 2025
 the pure LP did this in 66–129 quarter-hours (all at prices ≤ 0), so the model uses a **MILP** with one
 binary per step (charge *or* discharge). Revenue impact is small (≤ 25 EUR/month) and the MILP solves
-in ~1 s with SciPy/HiGHS. `solve_arbitrage(..., allow_simultaneous=True)` restores the pure LP; the
-output still reports `simultaneous_steps` as a check.
+in ~1 s with SciPy/HiGHS. `solve_arbitrage(..., allow_simultaneous=True)` restores the pure LP.
 
 ### Capacity prices
 - FCR is pay-as-cleared: revenue uses the German settlement price.

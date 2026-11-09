@@ -39,4 +39,3 @@ def test_summary_counts_cycles():
     summary = summarize_dispatch(solve_arbitrage(_prices([0.0, 100.0]), battery), battery)
     # 0.8649 MW * 0.25 h discharged over 0.5 h = 1/48 day, divided by 3 MWh
     assert summary["full_cycles_per_day"] == pytest.approx(0.93**2 * 0.25 / 3.0 / (0.5 / 24), rel=1e-4)
-    assert summary["simultaneous_steps"] == 0

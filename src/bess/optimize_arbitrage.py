@@ -1,12 +1,10 @@
 """Perfect-foresight arbitrage MILP/LP: buy low, sell high within the battery's power, energy and SoC limits."""
 import cvxpy as cp
-import numpy as np
 import pandas as pd
 
 from bess.battery import BatteryParams
 
 DT_H = 0.25  # 15-min steps
-ACTIVE_THRESHOLD_MW = 1e-4  # below this, solver noise counts as "not charging / discharging"
 
 
 def solve_arbitrage(
@@ -61,12 +59,10 @@ def solve_arbitrage(
 
 
 def summarize_dispatch(dispatch: pd.DataFrame, battery: BatteryParams, dt_h: float = DT_H) -> dict[str, float]:
-    """Total revenue, equivalent full cycles per day and the simultaneous charge/discharge check."""
+    """Total revenue and equivalent full cycles per day."""
     n_days = len(dispatch) * dt_h / 24
     discharged_mwh = dispatch["discharge_mw"].sum() * dt_h
-    simultaneous = (dispatch["charge_mw"] > ACTIVE_THRESHOLD_MW) & (dispatch["discharge_mw"] > ACTIVE_THRESHOLD_MW)
     return {
         "revenue_eur": float(dispatch["revenue_eur"].sum()),
         "full_cycles_per_day": float(discharged_mwh / battery.e_max_mwh / n_days),
-        "simultaneous_steps": int(np.sum(simultaneous)),
     }

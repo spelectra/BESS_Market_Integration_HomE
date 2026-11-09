@@ -33,9 +33,9 @@ def main() -> None:
     print(f"\nRevenue in EUR, {args.start} to {args.end} (exclusive), 3 MWh, perfect foresight, NOT additive:")
     print(revenue_table.round(0).to_string())
 
-    print("\nLP plausibility check (arbitrage markets only):")
+    print("\nPlausibility check (arbitrage markets only):")
     checks = results.dropna(subset=["full_cycles_per_day"])
-    print(checks[["market", "power_mw", "full_cycles_per_day", "simultaneous_steps"]].round(2).to_string(index=False))
+    print(checks[["market", "power_mw", "full_cycles_per_day"]].round(2).to_string(index=False))
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     out_path = PROCESSED_DIR / f"revenue_{args.start}_{args.end}.csv"
