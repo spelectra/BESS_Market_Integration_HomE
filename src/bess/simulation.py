@@ -10,7 +10,7 @@ from bess.data.load import load_capacity_prices, load_energy_prices
 from bess.optimize_arbitrage import solve_arbitrage, summarize_dispatch
 from bess.paths import RAW_DIR
 
-POWER_LEVELS_MW = (1.0, 2.0, 3.0)
+POWER_LEVELS_MW = (0.8,1.0, 2.0, 3.0)
 CAPACITY_REVENUE = {"fcr": fcr_revenue, "afrr": afrr_revenue}  # market -> revenue function
 
 
