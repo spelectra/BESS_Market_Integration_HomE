@@ -9,8 +9,8 @@ class BatteryParams:
     e_max_mwh: float = 3.0  # usable energy capacity
     p_max_mw: float = 1.0  # same limit for charging and discharging
     eta: float = 0.93  # one-way efficiency, round trip = eta**2 ≈ 0.86
-    soc_min_frac: float = 0.0  # SoC window as fraction of e_max
-    soc_max_frac: float = 1.0
+    soc_min_frac: float = 0.05  # SoC window as fraction of e_max
+    soc_max_frac: float = 0.95
     soc_start_frac: float = 0.5  # start SoC = end SoC
 
     @property
