@@ -7,20 +7,16 @@ from bess.battery import BatteryParams
 DT_H = 0.25  # 15-min steps
 
 
-def solve_arbitrage(
-    prices: pd.Series, battery: BatteryParams, dt_h: float = DT_H, allow_simultaneous: bool = False
-) -> pd.DataFrame:
-    """Maximize arbitrage revenue over the whole price series (perfect foresight).
+def battery_model(n: int, battery: BatteryParams, dt_h: float, allow_simultaneous: bool):
+    """Decision variables and physical constraints shared by every battery LP.
 
     Power is measured at the grid connection: charging `c` MW stores eta * c, discharging `d` MW
-    takes d / eta out of the battery. Returns one row per step with charge, discharge, SoC and revenue.
+    takes d / eta out of the battery. SoC end == start, so no energy leaks into the next horizon.
 
     allow_simultaneous=False (default) adds one binary per step so the battery either charges or
     discharges (MILP). With True it is a pure LP, which at negative prices charges and discharges at
     once to burn energy through the losses — physically impossible, but useful as an experiment.
     """
-    n = len(prices)
-    price = prices.to_numpy()
     charge = cp.Variable(n, nonneg=True)  # MW drawn from the grid
     discharge = cp.Variable(n, nonneg=True)  # MW fed into the grid
     soc = cp.Variable(n + 1)  # MWh at the step boundaries: soc[0] = start, soc[n] = end
@@ -39,12 +35,27 @@ def solve_arbitrage(
         is_charging = cp.Variable(n, boolean=True)  # 1 = may charge, 0 = may discharge
         constraints += [charge <= battery.p_max_mw * is_charging, discharge <= battery.p_max_mw * (1 - is_charging)]
         solver = cp.SCIPY  # SciPy's HiGHS handles mixed-integer problems; month-long MILP solves in ~1 s
+    return charge, discharge, soc, constraints, solver
 
-    revenue = dt_h * price @ (discharge - charge)  # EUR = EUR/MWh * MW * h
-    problem = cp.Problem(cp.Maximize(revenue), constraints)
+
+def maximize(objective: cp.Expression, constraints: list, solver) -> None:
+    problem = cp.Problem(cp.Maximize(objective), constraints)
     problem.solve(solver=solver)
     if problem.status != cp.OPTIMAL:
         raise RuntimeError(f"LP not solved to optimality: status={problem.status}")
+
+
+def solve_arbitrage(
+    prices: pd.Series, battery: BatteryParams, dt_h: float = DT_H, allow_simultaneous: bool = False
+) -> pd.DataFrame:
+    """Maximize arbitrage revenue over the whole price series (perfect foresight on `prices`).
+
+    Returns one row per step with charge, discharge, SoC and revenue. See battery_model for the physics.
+    """
+    price = prices.to_numpy()
+    charge, discharge, soc, constraints, solver = battery_model(len(prices), battery, dt_h, allow_simultaneous)
+    revenue = dt_h * price @ (discharge - charge)  # EUR = EUR/MWh * MW * h
+    maximize(revenue, constraints, solver)
 
     return pd.DataFrame(
         {
@@ -53,6 +64,38 @@ def solve_arbitrage(
             "discharge_mw": discharge.value,
             "soc_mwh": soc.value[1:],  # SoC at the end of each step
             "revenue_eur": dt_h * price * (discharge.value - charge.value),
+        },
+        index=prices.index,
+    )
+
+
+def solve_retrade(
+    prices: pd.Series,
+    base_position_mw: pd.Series,
+    battery: BatteryParams,
+    fee_eur_mwh: float,
+    dt_h: float = DT_H,
+    allow_simultaneous: bool = False,
+) -> pd.DataFrame:
+    """Re-trade an existing position (e.g. from DA) on a later market (e.g. ID).
+
+    The LP picks the new physical schedule; only the change `delta = new net - base` is traded at
+    `prices`, and every traded MWh costs `fee_eur_mwh`. Without a fee the base position would not
+    matter at all: the LP would simply re-solve on `prices`.
+    """
+    price = prices.to_numpy()
+    base = base_position_mw.to_numpy()
+    charge, discharge, soc, constraints, solver = battery_model(len(prices), battery, dt_h, allow_simultaneous)
+    delta = discharge - charge - base  # MW, + = sell more than the base position
+    revenue = dt_h * (price @ delta - fee_eur_mwh * cp.sum(cp.abs(delta)))
+    maximize(revenue, constraints, solver)
+
+    return pd.DataFrame(
+        {
+            "charge_mw": charge.value,
+            "discharge_mw": discharge.value,
+            "soc_mwh": soc.value[1:],
+            "delta_mw": delta.value,
         },
         index=prices.index,
     )

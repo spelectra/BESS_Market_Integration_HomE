@@ -1,6 +1,7 @@
 """Load raw CSVs from data/raw into clean, validated price data for the simulation."""
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from bess.data import entsoe, netztransparenz, regelleistung
@@ -92,3 +93,28 @@ def load_capacity_prices(start_date: str, end_date: str, raw_dir: Path = RAW_DIR
         "fcr": _load_blocks(raw_dir, start_date, end_date, "FCR", "PRODUCTNAME", FCR_PRICE_COLUMN),
         "afrr": _load_blocks(raw_dir, start_date, end_date, "aFRR", "PRODUCT", AFRR_PRICE_COLUMN),
     }
+
+
+SITE_DEMAND_FILE = "WERHM_15_min.csv"  # 15-min export of the Wertheim charging site, average kW per step
+
+
+def load_site_demand(
+    start_date: str, end_date: str, raw_dir: Path = RAW_DIR, filename: str = SITE_DEMAND_FILE
+) -> pd.Series:
+    """Site grid draw in MW on a complete 15-min UTC grid for the local days [start_date, end_date).
+
+    The export uses local wall-clock time and has no row for quarter-hours without any charging
+    (almost only at night), so missing steps are filled with 0 MW.
+    """
+    df = pd.read_csv(raw_dir / filename)
+    wall_clock = pd.to_datetime(df["TS 15MIN"], format="ISO8601")
+    # The fall-back hour (02:00-03:00 on the last Sunday in October) appears only once: read it as summer time.
+    local = wall_clock.dt.tz_localize(MARKET_TZ, ambiguous=np.ones(len(df), dtype=bool))
+    demand = pd.Series(df["AVG KW"].to_numpy() / 1000, index=local.dt.tz_convert("UTC"), name="site_demand_mw")
+
+    start = pd.Timestamp(start_date, tz=MARKET_TZ).tz_convert("UTC")
+    end = pd.Timestamp(end_date, tz=MARKET_TZ).tz_convert("UTC")
+    if start < demand.index.min() or end > demand.index.max() + STEP:
+        raise ValueError(f"{filename} covers {demand.index.min()} to {demand.index.max()}, not {start} to {end}")
+    steps = pd.date_range(start, end, freq=STEP, inclusive="left")
+    return demand.reindex(steps, fill_value=0.0)
